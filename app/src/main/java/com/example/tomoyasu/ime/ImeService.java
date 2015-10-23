@@ -15,6 +15,7 @@ package com.example.tomoyasu.ime;
         import java.util.Map;
 
         import android.content.Context;
+        import android.graphics.Color;
         import android.hardware.Sensor;
         import android.hardware.SensorEvent;
         import android.hardware.SensorEventListener;
@@ -33,10 +34,10 @@ package com.example.tomoyasu.ime;
 public class ImeService extends InputMethodService implements SensorEventListener {
     Handler countHandler;   //イベントハンドラ
     private static final Map<String, String> map, voiced, semivoiced; //五十音表を格納
-    private float proxi = 0;
-    private String morse = "";
-    private boolean onsw = false;
-    private long startTime = 0, endTime = 0;
+    private float proxi = 0; //近接センサ値
+    private String morse = ""; //モールス信号の2進数表記
+    private boolean onsw = false; //最初の近接センサの誤動作を防止,falseでoff
+    private long startTime = 0, endTime = 0; //手をかざし始めた時間,終えた時間
     OutputStream os;    //output stream
     InputStream is;     //input stream
     PrintWriter writer; //writer file
@@ -46,9 +47,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private long countTon = 0, countZi = 0; //トンツーそれぞれの個数
     private ArrayList<Long> arrayTon = new ArrayList<Long>();
     private ArrayList<Long> arrayZi = new ArrayList<Long>();
-    private long hoge = 0;
+    private long hoge = 0; //aveBorder算出のための仮変数
     private ArrayList<String> arrayMst = new ArrayList<String>(); //文字列の最後尾を管理
-    private String tv = "hoge";
+    private String tv = ""; //入力中のモールス信号表示のための変数
+    private TextView text; //動的Textview用
 
     static {
         map = new HashMap<String, String>();
@@ -119,6 +121,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
                 }
 
                 morse = "";
+                tv = "";
             }
 
             //文字の削除
@@ -156,10 +159,11 @@ public class ImeService extends InputMethodService implements SensorEventListene
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
 
-        TextView text = new TextView(this);
+        text = new TextView(this);
         text.setText(tv);
         text.setTextSize(28);
         text.setGravity(Gravity.CENTER);
+        text.setBackgroundColor(Color.WHITE);
         linearLayout.addView(text);
 
         ImageView image = new ImageView(this);
@@ -328,8 +332,15 @@ public class ImeService extends InputMethodService implements SensorEventListene
                 endTime = System.currentTimeMillis();
 
                 //モールス信号の判別
-                if ( (endTime - startTime) <= aveBorder) morse = morse + "0";
-                else morse = morse + "1";
+                if ( (endTime - startTime) <= aveBorder) {
+                    morse = morse + "0";
+                    tv = tv + "・";
+                } else {
+                    morse = morse + "1";
+                    tv = tv + "―";
+                }
+
+                text.setText(tv);
 
                 writer.append(Long.toString(endTime - startTime) + "\n");
             }
