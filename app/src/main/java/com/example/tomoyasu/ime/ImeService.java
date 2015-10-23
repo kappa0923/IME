@@ -21,20 +21,20 @@ package com.example.tomoyasu.ime;
         import android.hardware.SensorManager;
         import android.inputmethodservice.InputMethodService;
         import android.os.Handler;
+        import android.view.Gravity;
         import android.view.KeyEvent;
         import android.view.View;
         import android.view.ViewGroup;
         import android.view.inputmethod.EditorInfo;
         import android.widget.ImageView;
         import android.widget.LinearLayout;
+        import android.widget.TextView;
 
 public class ImeService extends InputMethodService implements SensorEventListener {
     Handler countHandler;   //イベントハンドラ
     private static final Map<String, String> map, voiced, semivoiced; //五十音表を格納
     private float proxi = 0;
-//    private int[] timer = {0, 0};
     private String morse = "";
-//    private String mst = ""; // 最後の文字
     private boolean onsw = false;
     private long startTime = 0, endTime = 0;
     OutputStream os;    //output stream
@@ -48,6 +48,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private ArrayList<Long> arrayZi = new ArrayList<Long>();
     private long hoge = 0;
     private ArrayList<String> arrayMst = new ArrayList<String>(); //文字列の最後尾を管理
+    private String tv = "hoge";
 
     static {
         map = new HashMap<String, String>();
@@ -74,12 +75,6 @@ public class ImeService extends InputMethodService implements SensorEventListene
         semivoiced.put("あ", "ぁ"); semivoiced.put("い", "ぃ"); semivoiced.put("う", "ぅ"); semivoiced.put("え", "ぇ"); semivoiced.put("お", "ぉ");
         semivoiced.put("や", "ゃ"); semivoiced.put("ゆ", "ゅ"); semivoiced.put("よ", "ょ");
         semivoiced.put("つ", "っ");
-    }
-
-    @Override
-    public void onCreate() {
-        // life cycle 1
-        super.onCreate();
     }
 
     //裏で走らせてるハンドラ
@@ -120,8 +115,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
                 //文字の割り当て
                 if (map.containsKey(morse)) {
                     arrayMst.add(map.get(morse));
-                    android.util.Log.v("amst", arrayMst.get(arrayMst.size() - 1 ));
-                    getCurrentInputConnection().commitText( arrayMst.get(arrayMst.size() - 1 ), 1);
+                    getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() - 1), 1);
                 }
 
                 morse = "";
@@ -139,6 +133,11 @@ public class ImeService extends InputMethodService implements SensorEventListene
         }
     };
 
+    @Override
+    public void onCreate() {
+        // life cycle 1
+        super.onCreate();
+    }
 
     @Override
     public View onCreateInputView() {
@@ -157,9 +156,14 @@ public class ImeService extends InputMethodService implements SensorEventListene
         LinearLayout linearLayout = new LinearLayout(this);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
 
+        TextView text = new TextView(this);
+        text.setText(tv);
+        text.setTextSize(28);
+        text.setGravity(Gravity.CENTER);
+        linearLayout.addView(text);
+
         ImageView image = new ImageView(this);
         image.setImageResource(R.drawable.morse);
-//	    image.setScaleType(ImageView.ScaleType.CENTER_CROP);
         image.setScaleType(ImageView.ScaleType.FIT_XY);
         linearLayout.addView(image);
 
@@ -301,8 +305,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
         // life cycle 6
         super.onDestroy();
 
+        // Handlerの終了
         countHandler.removeCallbacks(runnable);
 
+        // SensorManagerの開放
         SensorManager sensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         sensorManager.unregisterListener(this);
     }
@@ -316,25 +322,19 @@ public class ImeService extends InputMethodService implements SensorEventListene
             if (proxi == 0) {
                 //近接時
                 if (!onsw) onsw = true;
-//                timer[0] = 0;
                 startTime = System.currentTimeMillis();
-                //android.util.Log.v("tag1", Long.toString(startTime));
-
             } else if (onsw) {
-//            } else if ( (endTime - startTime) > 10 ) {
                 //非近接時
-                //if (timer[0] <= 35) morse = morse + "0";
                 endTime = System.currentTimeMillis();
-//                android.util.Log.v("tag1", Long.toString(endTime - startTime));
 
                 //モールス信号の判別
                 if ( (endTime - startTime) <= aveBorder) morse = morse + "0";
                 else morse = morse + "1";
 
-//                timer[1] = 0;
                 writer.append(Long.toString(endTime - startTime) + "\n");
             }
 
+            //これはなんかの参考になるかもしれんし残しておこう...
             //if (event.values[0] == 0) getCurrentInputConnection().commitText("たらこ", 1);
         }
     }
