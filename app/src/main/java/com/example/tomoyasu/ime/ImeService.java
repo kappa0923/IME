@@ -34,7 +34,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private float proxi = 0;
 //    private int[] timer = {0, 0};
     private String morse = "";
-    private String mst = ""; // 最後の文字
+//    private String mst = ""; // 最後の文字
     private boolean onsw = false;
     private long startTime = 0, endTime = 0;
     OutputStream os;    //output stream
@@ -47,6 +47,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private ArrayList<Long> arrayTon = new ArrayList<Long>();
     private ArrayList<Long> arrayZi = new ArrayList<Long>();
     private long hoge = 0;
+    private ArrayList<String> arrayMst = new ArrayList<String>(); //文字列の最後尾を管理
 
     static {
         map = new HashMap<String, String>();
@@ -89,7 +90,8 @@ public class ImeService extends InputMethodService implements SensorEventListene
 //            if (proxi == 0 && timer[0] < 100) timer[0]++;
 //            else if (timer[1] < 100) timer[1]++;
 
-            if ( (System.currentTimeMillis() - endTime) >= 600 && (System.currentTimeMillis() - endTime <= 610) && onsw && proxi != 0) {
+            // 近接センサが一定時間変更されなかったら、入力を確定
+            if ( (System.currentTimeMillis() - endTime) >= aveBorder*2 && (System.currentTimeMillis() - endTime <= aveBorder*2 + 10) && onsw && proxi != 0) {
 //                android.util.Log.v("tag2", Long.toString(System.currentTimeMillis() - endTime) );
 //            if (timer[1] == 40 && onsw) {
                 //文字の削除
@@ -97,27 +99,40 @@ public class ImeService extends InputMethodService implements SensorEventListene
                     sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
                 }
 
-                //濁音へ置換
-                if (morse.equals("00") && voiced.containsKey(mst)) {
-                    mst = voiced.get(mst);
-                    sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-                    getCurrentInputConnection().commitText(mst, 1);
-                }
+                if (arrayMst.size() > 0) {
+                    //濁音へ置換
+                    if (morse.equals("00") && voiced.containsKey(arrayMst.get(arrayMst.size() -1 ))) {
+                        arrayMst.add(voiced.get(arrayMst.get(arrayMst.size() - 1)));
+                        arrayMst.remove(arrayMst.size() - 2);
+                        sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+                        getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() -1 ), 1);
+                    }
 
-                //半濁音へ置換
-                if (morse.equals("00110") && semivoiced.containsKey(mst)) {
-                    mst = semivoiced.get(mst);
-                    sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-                    getCurrentInputConnection().commitText(mst, 1);
+                    //半濁音へ置換
+                    if (morse.equals("00110") && semivoiced.containsKey(arrayMst.get(arrayMst.size() - 1 ))) {
+                        arrayMst.add(semivoiced.get(arrayMst.get(arrayMst.size() - 1)));
+                        arrayMst.remove(arrayMst.size() - 2);
+                        sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+                        getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() - 1 ), 1);
+                    }
                 }
 
                 //文字の割り当て
                 if (map.containsKey(morse)) {
-                    mst = map.get(morse);
-                    getCurrentInputConnection().commitText(mst, 1);
+                    arrayMst.add(map.get(morse));
+                    android.util.Log.v("amst", arrayMst.get(arrayMst.size() - 1 ));
+                    getCurrentInputConnection().commitText( arrayMst.get(arrayMst.size() - 1 ), 1);
                 }
 
                 morse = "";
+            }
+
+            //文字の削除
+            if (System.currentTimeMillis() - startTime > aveBorder*3 && onsw && proxi == 0) {
+                onsw = false;
+                startTime = System.currentTimeMillis();
+                sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+                arrayMst.remove( arrayMst.size() - 1 );
             }
 
             countHandler.postDelayed(runnable, 10); // 呼び出し間隔(ミリ秒)
@@ -197,7 +212,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
         // life cycle 4
         super.onStartInputView(info, restarting);
 
-        // borderの読み込み
+        // aveからaveBorderの読み込み
         try {
             is = openFileInput("ave.txt");
             reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
@@ -279,39 +294,6 @@ public class ImeService extends InputMethodService implements SensorEventListene
         // life cycle 5
         super.onFinishInput();
         writer.close();
-
-        //それぞれの平均の算出
-//        try {
-//            is = openFileInput("track.txt");
-//            reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-//            Long hoge = Long.parseLong(reader.readLine());
-//            while (hoge != null) {
-//                if (hoge < aveBorder) {
-//                    aveTon += hoge;
-//                    countTon++;
-//                } else {
-//                    aveZi += hoge;
-//                    countZi++;
-//                }
-//            }
-//            aveTon = aveTon / countTon;
-//            aveZi = aveZi / countZi;
-//            reader.close();
-//        }
-//        catch (Exception e) {
-//            e.printStackTrace();
-//        }
-
-        //それぞれの平均からボーダーを算出し、保存
-//        try {
-//            os = openFileOutput("ave.txt", MODE_PRIVATE);
-//            writer = new PrintWriter(new OutputStreamWriter(os, "UTF-8"));
-//            writer.println( (aveTon + aveZi) / 2 );
-//            writer.close();
-//        }
-//        catch (Exception e) {
-//            e.printStackTrace();
-//        }
     }
 
     @Override
