@@ -122,6 +122,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
 
                 morse = "";
                 tv = "";
+                text.setText(tv);
             }
 
             //文字の削除
@@ -203,6 +204,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
         Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         if (sensor != null) {
             sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
+        }
+        Sensor sensor1 = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        if (sensor1 != null) {
+            sensorManager.registerListener(this, sensor1, SensorManager.SENSOR_DELAY_GAME);
         }
 
         return linearLayout;
@@ -320,7 +325,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        // TODO 自動生成されたメソッド・スタブ
+        // 近接センサ
         if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
             proxi = event.values[0];
             if (proxi == 0) {
@@ -347,6 +352,15 @@ public class ImeService extends InputMethodService implements SensorEventListene
 
             //これはなんかの参考になるかもしれんし残しておこう...
             //if (event.values[0] == 0) getCurrentInputConnection().commitText("たらこ", 1);
+        }
+
+        // 直線加速度センサ
+        if (event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
+            if ( (event.values[0] + event.values[1] + event.values[2]) > 5) {
+                morse = "";
+                tv = "";
+                text.setText(tv);
+            }
         }
     }
 
