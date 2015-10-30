@@ -16,16 +16,19 @@ package com.example.tomoyasu.ime;
 
         import android.content.Context;
         import android.graphics.Color;
+        import android.graphics.Point;
         import android.hardware.Sensor;
         import android.hardware.SensorEvent;
         import android.hardware.SensorEventListener;
         import android.hardware.SensorManager;
         import android.inputmethodservice.InputMethodService;
         import android.os.Handler;
+        import android.view.Display;
         import android.view.Gravity;
         import android.view.KeyEvent;
         import android.view.View;
         import android.view.ViewGroup;
+        import android.view.WindowManager;
         import android.view.inputmethod.EditorInfo;
         import android.widget.ImageView;
         import android.widget.LinearLayout;
@@ -35,7 +38,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     Handler countHandler;   //イベントハンドラ
     private static final Map<String, String> map, voiced, semivoiced; //五十音表を格納
     private float proxi = 0; //近接センサ値
-    private String morse = ""; //モールス信号の2進数表記
+    static public String morse = ""; //モールス信号の2進数表記
     private boolean onsw = false; //最初の近接センサの誤動作を防止,falseでoff
     private long startTime = 0, endTime = 0; //手をかざし始めた時間,終えた時間
     OutputStream os;    //output stream
@@ -51,6 +54,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private ArrayList<String> arrayMst = new ArrayList<String>(); //文字列の最後尾を管理
     private String tv = ""; //入力中のモールス信号表示のための変数
     private TextView text; //動的Textview用
+    static public Point size = new Point(); //画面サイズ共有用
 
     static {
         map = new HashMap<String, String>();
@@ -167,9 +171,22 @@ public class ImeService extends InputMethodService implements SensorEventListene
         text.setBackgroundColor(Color.WHITE);
         linearLayout.addView(text);
 
+        /*
         ImageView image = new ImageView(this);
         image.setImageResource(R.drawable.morse);
         image.setScaleType(ImageView.ScaleType.FIT_XY);
+        linearLayout.addView(image);
+        */
+
+        // 画面サイズの取得
+        WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        Display display = wm.getDefaultDisplay();
+
+        // 画面サイズを元にViewのサイズを設定する
+        display.getSize(size);
+        LinearLayout.LayoutParams params1 = new LinearLayout.LayoutParams( size.x, (int)(0.44*size.x) );
+        MyView image = new MyView(getApplication());
+        image.setLayoutParams(params1);
         linearLayout.addView(image);
 
         // ボタンの追加
@@ -199,7 +216,6 @@ public class ImeService extends InputMethodService implements SensorEventListene
 //		});
 //		linearLayout.addView(button2);
 
-        // センサーマネージャの登録
         SensorManager sensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         if (sensor != null) {
