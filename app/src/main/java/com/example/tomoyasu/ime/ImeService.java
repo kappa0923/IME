@@ -55,6 +55,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private String tv = ""; //入力中のモールス信号表示のための変数
     private TextView text; //動的Textview用
     static public Point size = new Point(); //画面サイズ共有用
+    MyView image;
 
     static {
         map = new HashMap<String, String>();
@@ -130,11 +131,16 @@ public class ImeService extends InputMethodService implements SensorEventListene
             }
 
             //文字の削除
-            if (System.currentTimeMillis() - startTime > aveBorder*3 && onsw && proxi == 0) {
+            //文字の入力中に長くなった場合を考慮
+            //削除するときに、listが空じゃないかも確認
+            if (System.currentTimeMillis() - startTime > aveBorder*3 && onsw && proxi == 0 && morse.equals("") && arrayMst.size() > 0) {
                 onsw = false;
                 startTime = System.currentTimeMillis();
                 sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
                 arrayMst.remove( arrayMst.size() - 1 );
+
+                tv = "削除";
+                text.setText(tv);
             }
 
             countHandler.postDelayed(runnable, 10); // 呼び出し間隔(ミリ秒)
@@ -185,7 +191,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
         // 画面サイズを元にViewのサイズを設定する
         display.getSize(size);
         LinearLayout.LayoutParams params1 = new LinearLayout.LayoutParams( size.x, (int)(0.44*size.x) );
-        MyView image = new MyView(getApplication());
+        image = new MyView(getApplication());
         image.setLayoutParams(params1);
         linearLayout.addView(image);
 
@@ -346,7 +352,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
             proxi = event.values[0];
             if (proxi == 0) {
                 //近接時
-                if (!onsw) onsw = true;
+                if (!onsw) {
+                    onsw = true;
+                    tv = "";
+                }
                 startTime = System.currentTimeMillis();
             } else if (onsw) {
                 //非近接時
@@ -362,6 +371,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
                 }
 
                 text.setText(tv);
+                image.invalidate();
 
                 writer.append(Long.toString(endTime - startTime) + "\n");
             }

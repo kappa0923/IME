@@ -43,12 +43,25 @@ public class MyView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        canvas.translate(0,0);
+        canvas.translate(0, 0);
         double hoge = (double)ImeService.size.x / bitmap.getWidth();
-        android.util.Log.v("tag", Double.toString(hoge) );
+        //android.util.Log.v("tag", Double.toString(hoge));
         float scaleSize = (float)hoge/*ImeService.size.x/728*/;
-        canvas.scale(scaleSize, scaleSize*2);
+        canvas.scale(scaleSize, scaleSize * 2);
         Paint paint = new Paint();
         canvas.drawBitmap(bitmap, 0, 0, null);
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(12);
+
+        if (map.containsKey(ImeService.morse)) {
+            int fuga1 = bitmap.getWidth() / 11;
+            int fuga2 = (int)(fuga1 * 0.49);
+            int posX = bitmap.getWidth() - (map.get(ImeService.morse)/5 + 1 ) * fuga1;
+            int posY = (map.get(ImeService.morse) % 5) * fuga2;
+            //android.util.Log.v("tag:", Integer.toString(fuga1));
+            canvas.drawRect(posX, posY, posX+fuga1, posY+fuga2, paint);
+        }
+
     }
 }
