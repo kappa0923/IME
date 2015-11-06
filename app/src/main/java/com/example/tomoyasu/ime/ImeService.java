@@ -104,7 +104,8 @@ public class ImeService extends InputMethodService implements SensorEventListene
 //            if (timer[1] == 40 && onsw) {
                 //文字の削除
                 if (morse.equals("00010")) {
-                    sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+                    sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER);
+                    arrayMst.add("Enter");
                 }
 
                 if (arrayMst.size() > 0) {
