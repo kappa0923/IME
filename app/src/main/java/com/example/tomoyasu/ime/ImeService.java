@@ -22,6 +22,9 @@ package com.example.tomoyasu.ime;
         import android.hardware.SensorEventListener;
         import android.hardware.SensorManager;
         import android.inputmethodservice.InputMethodService;
+        import android.media.AudioAttributes;
+        import android.media.AudioManager;
+        import android.media.SoundPool;
         import android.os.Handler;
         import android.view.Display;
         import android.view.Gravity;
@@ -56,6 +59,9 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private TextView text; //動的Textview用
     static public Point size = new Point(); //画面サイズ共有用
     MyView image;
+    private SoundPool soundPool;
+    private int soundId;
+    private int stremId;
 
     static {
         map = new HashMap<String, String>();
@@ -139,6 +145,8 @@ public class ImeService extends InputMethodService implements SensorEventListene
                 sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
                 arrayMst.remove( arrayMst.size() - 1 );
 
+                soundPool.stop(stremId);
+
                 tv = "削除";
                 text.setText(tv);
             }
@@ -151,6 +159,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
     public void onCreate() {
         // life cycle 1
         super.onCreate();
+
+        //音を再生するためにSoundPoolへ呼び出し
+        soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
+        soundId = soundPool.load(getApplicationContext(), R.raw.morse_a4, 0);
     }
 
     @Override
@@ -222,6 +234,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
 //		});
 //		linearLayout.addView(button2);
 
+        /* Sensormanagerを登録 */
         SensorManager sensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         if (sensor != null) {
@@ -342,6 +355,9 @@ public class ImeService extends InputMethodService implements SensorEventListene
         // SensorManagerの開放
         SensorManager sensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
         sensorManager.unregisterListener(this);
+
+        // SoundPoolの開放
+        soundPool.release();
     }
 
 
@@ -356,6 +372,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
                     onsw = true;
                     tv = "";
                 }
+
+                //音の再生
+                stremId = soundPool.play(soundId, 1.0f, 1.0f, 0, 0, 1.0f);
+
                 startTime = System.currentTimeMillis();
             } else if (onsw) {
                 //非近接時
@@ -369,6 +389,9 @@ public class ImeService extends InputMethodService implements SensorEventListene
                     morse = morse + "1";
                     tv = tv + "―";
                 }
+
+                //音の停止
+                soundPool.stop(stremId);
 
                 text.setText(tv);
                 image.invalidate();
