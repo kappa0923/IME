@@ -13,7 +13,6 @@ package com.example.tomoyasu.ime;
         import java.util.ArrayList;
         import java.util.HashMap;
         import java.util.Map;
-
         import android.content.Context;
         import android.graphics.Color;
         import android.graphics.Point;
@@ -22,7 +21,6 @@ package com.example.tomoyasu.ime;
         import android.hardware.SensorEventListener;
         import android.hardware.SensorManager;
         import android.inputmethodservice.InputMethodService;
-        import android.media.AudioAttributes;
         import android.media.AudioManager;
         import android.media.SoundPool;
         import android.os.Handler;
@@ -33,7 +31,6 @@ package com.example.tomoyasu.ime;
         import android.view.ViewGroup;
         import android.view.WindowManager;
         import android.view.inputmethod.EditorInfo;
-        import android.widget.ImageView;
         import android.widget.LinearLayout;
         import android.widget.TextView;
 
@@ -51,8 +48,8 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private long aveBorder = 383; //読み込み時のボーダー
     private long aveTon = 0, aveZi = 0; //トンツーそれぞれの平均
     private long countTon = 0, countZi = 0; //トンツーそれぞれの個数
-    private ArrayList<Long> arrayTon = new ArrayList<Long>();
-    private ArrayList<Long> arrayZi = new ArrayList<Long>();
+//    private ArrayList<Long> arrayTon = new ArrayList<Long>();
+//    private ArrayList<Long> arrayZi = new ArrayList<Long>();
     private long hoge = 0; //aveBorder算出のための仮変数
     private ArrayList<String> arrayMst = new ArrayList<String>(); //文字列の最後尾を管理
     private String tv = ""; //入力中のモールス信号表示のための変数
@@ -92,17 +89,18 @@ public class ImeService extends InputMethodService implements SensorEventListene
 
     //裏で走らせてるハンドラ
     private final Runnable runnable = new Runnable() {
+
         @Override
         public void run() {
             //getCurrentInputConnection().commitText("test", 1);
 //            if (proxi == 0 && timer[0] < 100) timer[0]++;
 //            else if (timer[1] < 100) timer[1]++;
 
-            // 近接センサが一定時間変更されなかったら、入力を確定
+            /* 近接センサが一定時間変更されなかったら、入力を確定 */
             if ( (System.currentTimeMillis() - endTime) >= aveBorder*2 && (System.currentTimeMillis() - endTime <= aveBorder*2 + 10) && onsw && proxi != 0) {
 //                android.util.Log.v("tag2", Long.toString(System.currentTimeMillis() - endTime) );
 //            if (timer[1] == 40 && onsw) {
-                //文字の削除
+                /* 文字の削除 */
                 if (morse.equals("00010")) {
                     sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER);
                     arrayMst.add("Enter");
