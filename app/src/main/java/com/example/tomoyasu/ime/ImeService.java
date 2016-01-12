@@ -5,6 +5,8 @@ package com.example.tomoyasu.ime;
  */
 
         import java.io.BufferedReader;
+        import java.io.File;
+        import java.io.IOException;
         import java.io.InputStream;
         import java.io.InputStreamReader;
         import java.io.OutputStream;
@@ -24,6 +26,7 @@ package com.example.tomoyasu.ime;
         import android.media.AudioManager;
         import android.media.SoundPool;
         import android.os.Handler;
+        import android.util.Log;
         import android.view.Display;
         import android.view.Gravity;
         import android.view.KeyEvent;
@@ -59,6 +62,10 @@ public class ImeService extends InputMethodService implements SensorEventListene
     private SoundPool soundPool;
     private int soundId;
     private int stremId;
+    OutputStream logStream; // Log file
+    PrintWriter logWriter; // Log file writer
+    ArrayList<Integer> arrayLog = new ArrayList<>();
+    String logString = "";
 
     static {
         map = new HashMap<String, String>();
@@ -100,19 +107,28 @@ public class ImeService extends InputMethodService implements SensorEventListene
             if ( (System.currentTimeMillis() - endTime) >= aveBorder*2 && (System.currentTimeMillis() - endTime <= aveBorder*2 + 10) && onsw && proxi != 0) {
 //                android.util.Log.v("tag2", Long.toString(System.currentTimeMillis() - endTime) );
 //            if (timer[1] == 40 && onsw) {
-                /* 文字の削除 */
+                /* EnterKeyの入力 */
                 if (morse.equals("00010")) {
                     sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER);
                     arrayMst.add("Enter");
                 }
 
                 if (arrayMst.size() > 0) {
-                    //濁音へ置換
+                    // 濁音へ置換
                     if (morse.equals("00") && voiced.containsKey(arrayMst.get(arrayMst.size() -1 ))) {
                         arrayMst.add(voiced.get(arrayMst.get(arrayMst.size() - 1)));
                         arrayMst.remove(arrayMst.size() - 2);
                         sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-                        getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() -1 ), 1);
+                        getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() - 1), 1);
+
+                        // 文字の入力をログファイルへ出力
+                        Log.i("LocalService", "voiced:" + arrayMst.get(arrayMst.size() - 1));
+                        logString = arrayMst.get(arrayMst.size()-1) + ":";
+                        for (int i = 0; i < arrayLog.size(); i++) {
+                            logString += arrayLog.get(i) + ",";
+                        }
+                        logString += "\n";
+                        logWriter.append(logString);
                     }
 
                     //半濁音へ置換
@@ -120,7 +136,16 @@ public class ImeService extends InputMethodService implements SensorEventListene
                         arrayMst.add(semivoiced.get(arrayMst.get(arrayMst.size() - 1)));
                         arrayMst.remove(arrayMst.size() - 2);
                         sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-                        getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() - 1 ), 1);
+                        getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() - 1), 1);
+
+                        // 文字の入力をログファイルへ出力
+                        Log.i("LocalService", "voiced:" + arrayMst.get(arrayMst.size() - 1));
+                        logString = arrayMst.get(arrayMst.size()-1) + ":";
+                        for (int i = 0; i < arrayLog.size(); i++) {
+                            logString += arrayLog.get(i) + ",";
+                        }
+                        logString += "\n";
+                        logWriter.append(logString);
                     }
                 }
 
@@ -128,8 +153,18 @@ public class ImeService extends InputMethodService implements SensorEventListene
                 if (map.containsKey(morse)) {
                     arrayMst.add(map.get(morse));
                     getCurrentInputConnection().commitText(arrayMst.get(arrayMst.size() - 1), 1);
+
+                    // 文字の入力をログファイルへ出力
+                    Log.i("LocalService", "Input:" + arrayMst.get(arrayMst.size() -1));
+                    logString = arrayMst.get(arrayMst.size()-1) + ":";
+                    for (int i = 0; i < arrayLog.size(); i++) {
+                        logString += arrayLog.get(i) + ",";
+                    }
+                    logString += "\n";
+                    logWriter.append(logString);
                 }
 
+                arrayLog.clear();
                 morse = "";
                 tv = "";
                 text.setText(tv);
@@ -139,10 +174,19 @@ public class ImeService extends InputMethodService implements SensorEventListene
             //文字の入力中に長くなった場合を考慮
             //削除するときに、listが空じゃないかも確認
             if (System.currentTimeMillis() - startTime > aveBorder*3 && onsw && proxi == 0 && morse.equals("") && arrayMst.size() > 0) {
+                Log.i("LocalService", "Delete:" + arrayMst.get(arrayMst.size() - 1));
+                logString = "削除:";
+                for (int i = 0; i < arrayLog.size(); i++) {
+                    logString += arrayLog.get(i) + ",";
+                }
+                logString += "\n";
+                logWriter.append(logString);
+                arrayLog.clear();
+
                 onsw = false;
                 startTime = System.currentTimeMillis();
                 sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-                arrayMst.remove( arrayMst.size() - 1 );
+                arrayMst.remove(arrayMst.size() - 1);
 
                 soundPool.stop(stremId);
 
@@ -158,6 +202,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     public void onCreate() {
         // life cycle 1
         super.onCreate();
+        Log.i("LocalService", "onCreate");
 
         //音を再生するためにSoundPoolへ呼び出し
         soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC, 0);
@@ -168,6 +213,7 @@ public class ImeService extends InputMethodService implements SensorEventListene
     public View onCreateInputView() {
         // life cycle 2
         // 入力ビューを作成する
+        Log.i("LocalService", "onCreateInputView");
 
         // 非同期処理の開始
         countHandler = new Handler();
@@ -258,14 +304,22 @@ public class ImeService extends InputMethodService implements SensorEventListene
     public void onStartInputView(EditorInfo info, boolean restarting) {
         // life cycle 4
         super.onStartInputView(info, restarting);
+        Log.i("LocalService", "onStartInputView");
 
         // aveからaveBorderの読み込み
         try {
-            is = openFileInput("ave.txt");
-            reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-            aveBorder = Long.parseLong(reader.readLine());
-            android.util.Log.v("aveBorder", Long.toString(aveBorder));
-            reader.close();
+            File file = this.getFileStreamPath("ave.txt");
+            // ファイルが存在する
+            if (file.exists()) {
+                is = openFileInput("ave.txt");
+                reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                aveBorder = Long.parseLong(reader.readLine());
+                android.util.Log.v("aveBorder", Long.toString(aveBorder));
+                reader.close();
+            } else {
+                // ファイルが存在しないなら,平均値をデフォルトに変更
+                aveBorder = 400;
+            }
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -273,29 +327,48 @@ public class ImeService extends InputMethodService implements SensorEventListene
 
         // borderの算出
         try {
-            is = openFileInput("track.txt");
-            reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-            String fuga = reader.readLine();
-            if (fuga != null) hoge = Long.parseLong(fuga);
-            else hoge = 0;
-            while(hoge != 0) {
-                if (hoge < aveBorder) {
-                    aveTon += hoge;
-                    countTon++;
-                } else {
-                    aveZi += hoge;
-                    countZi++;
-                }
-
-                fuga = reader.readLine();
+            File file = this.getFileStreamPath("track.txt");
+            // ファイルが存在する
+            if (file.exists()) {
+                is = openFileInput("track.txt");
+                reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                String fuga = reader.readLine();
                 if (fuga != null) hoge = Long.parseLong(fuga);
                 else hoge = 0;
+                while (hoge != 0) {
+                    if (hoge < aveBorder) {
+                        aveTon += hoge;
+                        countTon++;
+                    } else {
+                        aveZi += hoge;
+                        countZi++;
+                    }
+
+                    fuga = reader.readLine();
+                    if (fuga != null) hoge = Long.parseLong(fuga);
+                    else hoge = 0;
+                }
+
+                android.util.Log.v("aveTon", Long.toString(aveTon / countTon));
+                android.util.Log.v("aveZi", Long.toString(aveZi / countZi));
+
+                reader.close();
+            } else {
+                // ファイルが存在しないなら,デフォルトの値を持つファイルを作成
+                os = openFileOutput("track.txt", MODE_PRIVATE);
+                writer = new PrintWriter(new OutputStreamWriter(os, "UTF-8"));
+                for (int i=0; i<80; i++) {
+                    writer.append("200\n");
+                    writer.append("600\n");
+                }
+
+                aveTon = 20000;
+                countTon = 100;
+                aveZi = 60000;
+                countZi = 100;
+
+                writer.close();
             }
-
-            android.util.Log.v("aveTon", Long.toString( aveTon / countTon ));
-            android.util.Log.v("aveZi", Long.toString( aveZi / countZi ));
-
-            reader.close();
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -322,6 +395,15 @@ public class ImeService extends InputMethodService implements SensorEventListene
             e.printStackTrace();
         }
 
+        // ログファイルの読み込み
+        try {
+            logStream = openFileOutput("log.txt", MODE_APPEND);
+            logWriter = new PrintWriter(new OutputStreamWriter(logStream, "UTF-8"));
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
 
 
         // 出力テスト:data/data/com.example.tomoyasu.ime
@@ -340,13 +422,23 @@ public class ImeService extends InputMethodService implements SensorEventListene
     public void onFinishInput() {
         // life cycle 5
         super.onFinishInput();
+        Log.i("LocalService", "onFinishInput");
+
         writer.close();
+        logWriter.close();
+        try {
+            logStream.close();
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public void onDestroy() {
         // life cycle 6
         super.onDestroy();
+        Log.i("LocalService", "onDestroy");
 
         // Handlerの終了
         countHandler.removeCallbacks(runnable);
@@ -389,13 +481,17 @@ public class ImeService extends InputMethodService implements SensorEventListene
                     tv = tv + "―";
                 }
 
-                //音の停止
+                // 音の停止
                 soundPool.stop(stremId);
 
                 text.setText(tv);
                 image.invalidate();
 
+                // 時間の書き出し
                 writer.append(Long.toString(endTime - startTime) + "\n");
+
+                // 時間を配列に保持
+                arrayLog.add((int)(endTime - startTime));
             }
 
             //これはなんかの参考になるかもしれんし残しておこう...
